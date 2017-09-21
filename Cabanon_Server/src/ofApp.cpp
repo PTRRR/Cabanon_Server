@@ -163,6 +163,7 @@ void ofApp::runServerSequence() {
 		ofDirectory landmarksFiles(LANDMARKS_FOLDER_PATH);
 		landmarksFiles.listDir();
 
+		// Need to check really carrefully what kind of file are loaded here....
 		for (int i = 0; i < landmarksFiles.size(); i++) {
 			string fileName = ofSplitString(landmarksFiles.getName(i), "_det_")[0];
 			
@@ -179,21 +180,23 @@ void ofApp::runServerSequence() {
 				if (inputImage.getWidth() > 0 && inputImage.getHeight() > 0) {
 
 					ofImage croppedFace = getCroppedFace(inputImage, parsedLandmarks);
-					ofSaveImage(croppedFace.getPixels(), TO_PRINT_FOLDER_PATH + "/" + fileName + ".png", OF_IMAGE_QUALITY_BEST);
-					cout << fileName << " -> cropped and saved" << endl;
 
+					// Try a last time that there is no exeption here....
+					try {
+						ofSaveImage(croppedFace.getPixels(), TO_PRINT_FOLDER_PATH + "/" + fileName + ".png", OF_IMAGE_QUALITY_BEST);
+					}
+					catch(exception& e){
+						consoleText(e.what());
+					}
+					cout << fileName << " -> cropped and saved" << endl;
 				}
 				else {
-
 					cout << fileName << " is corrupted" << endl;
-
 				}
 
 			}
 			else {
-
 				cout << image.path() << " doesn't exists" << endl;
-
 			}
 		}
 
