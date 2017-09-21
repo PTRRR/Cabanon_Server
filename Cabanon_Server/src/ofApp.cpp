@@ -120,6 +120,14 @@ void ofApp::keyReleased(int key) {
 }
 
 void ofApp::runServerSequence() {
+
+	// Clear all
+	clearFolder(RPI_1_FOLDER_PATH);
+	clearFolder(RPI_2_FOLDER_PATH);
+	clearFolder(RPI_3_FOLDER_PATH);
+	clearFolder(SYNC_FOLDER_PATH);
+	clearFolder(LANDMARKS_FOLDER_PATH);
+	clearFolder(TO_PRINT_FOLDER_PATH);
 	
 	// Sync folder from the raspberry pi
 	RPISync();
@@ -135,7 +143,7 @@ void ofApp::runServerSequence() {
 	clearFolder(RPI_3_FOLDER_PATH);
 
 	// Check for new files
-	auto newFiles = getNewFiles(true);
+	auto newFiles = getNewFiles(5, true);
 
 	// If new files are detected then run the server sequence.
 	if (newFiles.size() > 0) {
@@ -157,15 +165,36 @@ void ofApp::runServerSequence() {
 
 		for (int i = 0; i < landmarksFiles.size(); i++) {
 			string fileName = ofSplitString(landmarksFiles.getName(i), "_det_")[0];
-			vector<ofVec2f> parsedLandmarks = parseLandmarksFile(landmarksFiles[i].getAbsolutePath());
 			
-			ofImage inputImage;
-			inputImage.load(SYNC_FOLDER_PATH + "/" + fileName + ".jpg");
+			// Check if the name is correctly composed and that it exists
+			ofFile image(SYNC_FOLDER_PATH + "/" + fileName + ".jpg");
+			if (image.exists() && fileName.size() == 13) {
 
-			// Crop the face and save it
-			ofImage croppedFace = getCroppedFace(inputImage, parsedLandmarks);
-			ofSaveImage(croppedFace.getPixels(), TO_PRINT_FOLDER_PATH + "/" + fileName + ".png", OF_IMAGE_QUALITY_BEST);
-			cout << fileName << " -> cropped and saved" << endl;
+				vector<ofVec2f> parsedLandmarks = parseLandmarksFile(landmarksFiles[i].getAbsolutePath());
+
+				ofImage inputImage;
+				inputImage.load(SYNC_FOLDER_PATH + "/" + fileName + ".jpg");
+
+				// Test, crop the face and save it
+				if (inputImage.getWidth() > 0 && inputImage.getHeight() > 0) {
+
+					ofImage croppedFace = getCroppedFace(inputImage, parsedLandmarks);
+					ofSaveImage(croppedFace.getPixels(), TO_PRINT_FOLDER_PATH + "/" + fileName + ".png", OF_IMAGE_QUALITY_BEST);
+					cout << fileName << " -> cropped and saved" << endl;
+
+				}
+				else {
+
+					cout << fileName << " is corrupted" << endl;
+
+				}
+
+			}
+			else {
+
+				cout << image.path() << " doesn't exists" << endl;
+
+			}
 		}
 
 		// Print all the cropped faces
@@ -206,7 +235,7 @@ void ofApp::RPISync() {
 
 }
 
-vector<string> ofApp::getNewFiles(bool removeOldFiles) {
+vector<string> ofApp::getNewFiles(int maxNewFiles, bool removeOldFiles) {
 
 	vector<string> newFiles;
 	ofDirectory syncFolder(SYNC_FOLDER_PATH);
@@ -214,6 +243,7 @@ vector<string> ofApp::getNewFiles(bool removeOldFiles) {
 	syncFolder.listDir();
 
 	// Check if in the sync folder there are files that have already been processed.
+	int numNewFilesFound = 0;
 	for (int i = 0; i < syncFolder.size(); i++) {
 
 		string syncFileName = ofSplitString(syncFolder.getName(i), ".")[0];
@@ -230,9 +260,10 @@ vector<string> ofApp::getNewFiles(bool removeOldFiles) {
 
 		}
 
-		if (!foundSameImageName) {
+		if (!foundSameImageName && numNewFilesFound < maxNewFiles) {
 			newFiles.push_back(syncFileName);
 			cachedFiles.push_back(syncFileName);
+			numNewFilesFound++;
 		}
 		else if (foundSameImageName && removeOldFiles) {
 			syncFolder[i].remove();
@@ -313,6 +344,7 @@ ofImage ofApp::getCroppedFace(ofImage inputImage, vector<ofVec2f> landmarks)
 
 	fbo.allocate(inputImage.getWidth(), inputImage.getHeight());
 	fbo.begin();
+	ofClear(0, 0, 0, 0);
 
 	inputImage.draw(0, 0, inputImage.getWidth(), inputImage.getHeight());
 

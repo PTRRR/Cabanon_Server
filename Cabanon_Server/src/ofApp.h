@@ -8,7 +8,7 @@ public:
 	// Utils
 	float time = 0;
 	float nextTime = 0;
-	float intervals = 20;
+	float intervals = 3;
 	ofTrueTypeFont font;
 	bool isFullscreen = true;
 	bool syncOnNextFrame = false;
@@ -58,7 +58,7 @@ public:
 	// Server
 	void runServerSequence();
 	void RPISync();
-	vector<string> getNewFiles(bool removeOldFiles);
+	vector<string> getNewFiles(int maxNewFiles, bool removeOldFiles);
 	void runLandmarksComputation(vector<string> imagesPathes);
 	ofImage getCroppedFace(ofImage inputImage, vector<ofVec2f> landmarks);
 	void print();
